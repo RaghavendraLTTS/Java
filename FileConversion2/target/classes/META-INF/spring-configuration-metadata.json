@@ -1,0 +1,22 @@
+{
+  "groups": [
+    {
+      "name": "file.folder",
+      "type": "com.ltts.fileConversion.Config.FileProperties",
+      "sourceType": "com.ltts.fileConversion.Config.FileProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "file.folder.path",
+      "type": "java.lang.String",
+      "sourceType": "com.ltts.fileConversion.Config.FileProperties"
+    },
+    {
+      "name": "nokia.folder.path",
+      "type": "java.lang.String",
+      "description": "A description for 'nokia.folder.path'"
+    }
+  ],
+  "hints": []
+}

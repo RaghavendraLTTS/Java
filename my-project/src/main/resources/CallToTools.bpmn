@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_155ifz7" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.24.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.21.0">
+  <bpmn:process id="CallToTools" name="CallToTools" isExecutable="true" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_0t5bfx7</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_0t5bfx7" sourceRef="StartEvent_1" targetRef="Gateway_0s0iwlf" />
+    <bpmn:serviceTask id="new" name="Parse tools Data">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Accept">application/json</camunda:entry>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="url">http://localhost:8081/api/predefinedtools</camunda:inputParameter>
+            <camunda:inputParameter name="payload">{
+    "toolnames": "${oneToolAtATime}"
+}</camunda:inputParameter>
+            <camunda:outputParameter name="predefinedTools">${response}</camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+        </camunda:connector>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_02kiyoz</bpmn:incoming>
+      <bpmn:outgoing>Flow_098mnre</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_098mnre" sourceRef="new" targetRef="pred" />
+    <bpmn:endEvent id="Event_10eevpj">
+      <bpmn:incoming>Flow_1yqozay</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="processPCI" name="ProcessTool">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Accept">application/json</camunda:entry>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="url">${hostname}</camunda:inputParameter>
+            <camunda:inputParameter name="payload">${rawDataResponse}</camunda:inputParameter>
+            <camunda:outputParameter name="parallelToolOutput">${response}</camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+        </camunda:connector>
+        <camunda:executionListener event="end">
+          <camunda:script scriptFormat="groovy">println "parallelToolOutput : " + parallelToolOutput;</camunda:script>
+        </camunda:executionListener>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0pfuuvn</bpmn:incoming>
+      <bpmn:incoming>Flow_1ervk3x</bpmn:incoming>
+      <bpmn:outgoing>Flow_1vmo9hi</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_1vmo9hi" sourceRef="processPCI" targetRef="updateDB" />
+    <bpmn:scriptTask id="pred" name="Predefined Tools" scriptFormat="groovy">
+      <bpmn:incoming>Flow_098mnre</bpmn:incoming>
+      <bpmn:outgoing>Flow_1cegacl</bpmn:outgoing>
+      <bpmn:script>import groovy.json.JsonSlurper
+
+def responseObj = S(predefinedTools);
+
+def isPredefinedToolsNull = responseObj.elements().get(0).prop("predefinedtools").isNull();
+
+execution.setVariable("isPredefinedToolsNull",isPredefinedToolsNull);
+
+execution.setVariable("hostname","");
+println "toolName :"+ oneToolAtATime
+ 
+if(oneToolAtATime == "PCI"){
+execution.setVariable("hostname","http://gsd-npo-360-harmony-pci.prod4.kairos.bh-dc-os-ohn-006.k8s.dyn.nesc.nokia.net/"+oneToolAtATime)
+}
+ 
+if(oneToolAtATime == "RSI"){
+execution.setVariable("hostname","http://gsd-npo-rsi.prod4.kairos.bh-dc-os-ohn-006.k8s.dyn.nesc.nokia.net/"+oneToolAtATime)
+}
+ 
+if(oneToolAtATime == "Output"){
+execution.setVariable("hostname","http://gsd-npo-360-harmony-merge.prod4.kairos.bh-dc-os-ohn-006.k8s.dyn.nesc.nokia.net/"+oneToolAtATime)
+}
+println "hostname " + hostname;
+println "RawData : " + rawDataResponse</bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:serviceTask id="updateDB" name="Update DB">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Accept">application/json</camunda:entry>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="url">http://localhost:8084/api/process-data</camunda:inputParameter>
+            <camunda:inputParameter name="payload">{
+  "processInstanceId": "${processInstanceId}",
+   "toolname":  "${oneToolAtATime}" ,
+   "data" :  ${parallelToolOutput}
+}</camunda:inputParameter>
+            <camunda:outputParameter name="recordStoreToDB">${response}</camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+        </camunda:connector>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1vmo9hi</bpmn:incoming>
+      <bpmn:outgoing>Flow_0stoxv6</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0stoxv6" sourceRef="updateDB" targetRef="Activity_1sr8b6v" />
+    <bpmn:sequenceFlow id="Flow_1yqozay" sourceRef="Activity_1sr8b6v" targetRef="Event_10eevpj" />
+    <bpmn:scriptTask id="Activity_1sr8b6v" name="Record Updated" scriptFormat="groovy">
+      <bpmn:incoming>Flow_0stoxv6</bpmn:incoming>
+      <bpmn:outgoing>Flow_1yqozay</bpmn:outgoing>
+      <bpmn:script>println "Record updated to DB " + recordStoreToDB;</bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:exclusiveGateway id="Gateway_13fcq0a" default="Flow_0pfuuvn">
+      <bpmn:incoming>Flow_1cegacl</bpmn:incoming>
+      <bpmn:outgoing>Flow_0pfuuvn</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0p0r032</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_1cegacl" sourceRef="pred" targetRef="Gateway_13fcq0a" />
+    <bpmn:sequenceFlow id="Flow_0pfuuvn" sourceRef="Gateway_13fcq0a" targetRef="processPCI" />
+    <bpmn:sequenceFlow id="Flow_0p0r032" sourceRef="Gateway_13fcq0a" targetRef="Activity_1qyqdyz">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${!isPredefinedToolsNull}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_1ervk3x" sourceRef="Activity_1w3vill" targetRef="processPCI" />
+    <bpmn:scriptTask id="Activity_1w3vill" name="get Previous Data" scriptFormat="groovy">
+      <bpmn:incoming>Flow_0wdhdul</bpmn:incoming>
+      <bpmn:outgoing>Flow_1ervk3x</bpmn:outgoing>
+      <bpmn:script>println "sequential call " +rawDataResponse
+</bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:serviceTask id="Activity_1qyqdyz" name="get Tools Output Data">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Accept">application/json</camunda:entry>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="url">http://localhost:8084/api/getAllToolsProcessedData</camunda:inputParameter>
+            <camunda:inputParameter name="payload">{
+    "processInstanceId":"${processInstanceId}",
+    "toolname":"${oneToolAtATime}" 
+}</camunda:inputParameter>
+            <camunda:outputParameter name="rawDataResponse">${response}</camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+        </camunda:connector>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0p0r032</bpmn:incoming>
+      <bpmn:outgoing>Flow_0wdhdul</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0wdhdul" sourceRef="Activity_1qyqdyz" targetRef="Activity_1w3vill" />
+    <bpmn:exclusiveGateway id="Gateway_0s0iwlf">
+      <bpmn:incoming>Flow_0t5bfx7</bpmn:incoming>
+      <bpmn:incoming>Flow_0byaveb</bpmn:incoming>
+      <bpmn:outgoing>Flow_02kiyoz</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_02kiyoz" sourceRef="Gateway_0s0iwlf" targetRef="new" />
+    <bpmn:boundaryEvent id="Event_18qqn84" attachedToRef="new">
+      <bpmn:outgoing>Flow_0xwvj3f</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorEventDefinition_1e5iyk1" errorRef="Error_06xhtxm" />
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="Activity_08r09ox" name="Send Exception to Ui">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="headers">
+              <camunda:map />
+            </camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="url">http://localhost:8087/api/echo</camunda:inputParameter>
+            <camunda:inputParameter name="payload">{
+   "statusCode": "${errorStatusCode}",
+   "response": "${errorResponse}",
+   "processInstanceId":"${execution.getProcessInstanceId()}"
+
+}</camunda:inputParameter>
+            <camunda:outputParameter name="errorStatusCode">${statusCode}</camunda:outputParameter>
+            <camunda:outputParameter name="errorNotificationResponse">${response}</camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+        </camunda:connector>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0xwvj3f</bpmn:incoming>
+      <bpmn:outgoing>Flow_1ltv1t3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0xwvj3f" sourceRef="Event_18qqn84" targetRef="Activity_08r09ox" />
+    <bpmn:intermediateCatchEvent id="Event_0v483sw">
+      <bpmn:incoming>Flow_1ltv1t3</bpmn:incoming>
+      <bpmn:outgoing>Flow_0byaveb</bpmn:outgoing>
+      <bpmn:signalEventDefinition id="SignalEventDefinition_1klwcan" signalRef="Signal_2bs6d4m" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_1ltv1t3" sourceRef="Activity_08r09ox" targetRef="Event_0v483sw" />
+    <bpmn:sequenceFlow id="Flow_0byaveb" sourceRef="Event_0v483sw" targetRef="Gateway_0s0iwlf" />
+  </bpmn:process>
+  <bpmn:error id="Error_1to77sl" name="ErrorInREST" errorCode="rest001" camunda:errorMessage="Error In REST" />
+  <bpmn:error id="Error_06xhtxm" name="ErrorInREST" errorCode="ErrorInREST" camunda:errorMessage="ErrorInREST" />
+  <bpmn:signal id="Signal_2bs6d4m" name="Signal-${execution.getProcessInstanceId()}" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="CallToTools">
+      <bpmndi:BPMNShape id="Event_10eevpj_di" bpmnElement="Event_10eevpj">
+        <dc:Bounds x="1382" y="269" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_0nmzz43" bpmnElement="processPCI">
+        <dc:Bounds x="910" y="247" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_1wyfx7n" bpmnElement="updateDB">
+        <dc:Bounds x="1080" y="247" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0j5kc16_di" bpmnElement="Activity_1sr8b6v">
+        <dc:Bounds x="1250" y="247" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_13fcq0a_di" bpmnElement="Gateway_13fcq0a" isMarkerVisible="true">
+        <dc:Bounds x="695" y="262" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0tmzg9b_di" bpmnElement="Activity_1w3vill">
+        <dc:Bounds x="910" y="390" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_0hppcdu" bpmnElement="Activity_1qyqdyz">
+        <dc:Bounds x="670" y="390" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="152" y="269" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1ddmry2_di" bpmnElement="new">
+        <dc:Bounds x="370" y="247" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_1nyp6a5" bpmnElement="pred">
+        <dc:Bounds x="550" y="247" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0s0iwlf_di" bpmnElement="Gateway_0s0iwlf" isMarkerVisible="true">
+        <dc:Bounds x="265" y="262" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0f0svg1_di" bpmnElement="Activity_08r09ox">
+        <dc:Bounds x="420" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_14580l6_di" bpmnElement="Event_0v483sw">
+        <dc:Bounds x="272" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1vd39aq_di" bpmnElement="Event_18qqn84">
+        <dc:Bounds x="452" y="229" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0t5bfx7_di" bpmnElement="Flow_0t5bfx7">
+        <di:waypoint x="188" y="287" />
+        <di:waypoint x="265" y="287" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_098mnre_di" bpmnElement="Flow_098mnre">
+        <di:waypoint x="470" y="287" />
+        <di:waypoint x="550" y="287" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1vmo9hi_di" bpmnElement="Flow_1vmo9hi">
+        <di:waypoint x="1010" y="287" />
+        <di:waypoint x="1080" y="287" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0stoxv6_di" bpmnElement="Flow_0stoxv6">
+        <di:waypoint x="1180" y="287" />
+        <di:waypoint x="1250" y="287" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1yqozay_di" bpmnElement="Flow_1yqozay">
+        <di:waypoint x="1350" y="287" />
+        <di:waypoint x="1382" y="287" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1cegacl_di" bpmnElement="Flow_1cegacl">
+        <di:waypoint x="650" y="287" />
+        <di:waypoint x="695" y="287" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0pfuuvn_di" bpmnElement="Flow_0pfuuvn">
+        <di:waypoint x="745" y="287" />
+        <di:waypoint x="910" y="287" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0p0r032_di" bpmnElement="Flow_0p0r032">
+        <di:waypoint x="720" y="312" />
+        <di:waypoint x="720" y="390" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1ervk3x_di" bpmnElement="Flow_1ervk3x">
+        <di:waypoint x="960" y="390" />
+        <di:waypoint x="960" y="327" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0wdhdul_di" bpmnElement="Flow_0wdhdul">
+        <di:waypoint x="770" y="430" />
+        <di:waypoint x="910" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_02kiyoz_di" bpmnElement="Flow_02kiyoz">
+        <di:waypoint x="315" y="287" />
+        <di:waypoint x="370" y="287" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0xwvj3f_di" bpmnElement="Flow_0xwvj3f">
+        <di:waypoint x="470" y="229" />
+        <di:waypoint x="470" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1ltv1t3_di" bpmnElement="Flow_1ltv1t3">
+        <di:waypoint x="420" y="120" />
+        <di:waypoint x="308" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0byaveb_di" bpmnElement="Flow_0byaveb">
+        <di:waypoint x="290" y="138" />
+        <di:waypoint x="290" y="262" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

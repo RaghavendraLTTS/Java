@@ -1,0 +1,12 @@
+#spring.datasource.url: jdbc:h2:file:./camunda-h2-database
+#spring.datasource.url: jdbc:mysql://localhost:3306/camunda?sessionVariables=sql_mode='NO_ENGINE_SUBSTITUTION'&jdbcCompliantTruncation=false
+#spring.datasource.username: root
+#spring.datasource.password: password
+spring.datasource.url: jdbc:mysql://10.129.216.76:3306/camunda?sessionVariables=sql_mode='NO_ENGINE_SUBSTITUTION'&jdbcCompliantTruncation=false
+spring.datasource.username: root
+spring.datasource.password: ltts
+server.port: 8082
+
+camunda.bpm.admin-user:
+  id: demo
+  password: demo

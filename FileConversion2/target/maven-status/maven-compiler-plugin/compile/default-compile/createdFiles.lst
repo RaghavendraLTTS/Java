@@ -1,0 +1,6 @@
+com\ltts\fileConversion\Config\FileProperties.class
+com\ltts\fileConversion\FileConversionApplication2.class
+com\ltts\fileConversion\Service\NokiaService.class
+com\ltts\fileConversion\util\ConversionUtil.class
+META-INF\spring-configuration-metadata.json
+com\ltts\fileConversion\controller\FileConversionController.class
